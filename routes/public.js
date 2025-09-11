@@ -128,7 +128,7 @@ module.exports = (db, providers) => {
   });
 
   router.post('/order', async (req, res) => {
-    const { brand, value, email, region = 'Asia' } = req.body;
+    const { brand, value, email, region = 'Asia', testMode = false, walletAddress } = req.body;
     
     if (!brand || !value || !email) {
       return res.status(400).json({ error: 'Missing required fields: brand, value, email' });
@@ -179,7 +179,9 @@ module.exports = (db, providers) => {
             value: value,
             price: pricing.finalPrice,
             cashback: pricing.cashback,
-            payment_address: paymentAddress
+            payment_address: paymentAddress,
+            test_mode: testMode ? 1 : 0,
+            wallet_address: walletAddress || null
           };
           
           db.createOrder(orderData, (err, result) => {
