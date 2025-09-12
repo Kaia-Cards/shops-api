@@ -279,8 +279,8 @@ class Database {
     this.db.all(`
       SELECT b.*, COUNT(gc.id) as card_count
       FROM brands b
-      LEFT JOIN gift_cards gc ON b.id = gc.brand_id AND gc.active = 1
-      WHERE b.active = 1
+      LEFT JOIN gift_cards gc ON b.id = gc.brand_id AND gc.is_available = 1
+      WHERE b.is_active = 1
       GROUP BY b.id
       ORDER BY b.name
     `, callback);
@@ -291,7 +291,7 @@ class Database {
       SELECT gc.*, b.name as brand_name, b.discount_rate
       FROM gift_cards gc
       JOIN brands b ON gc.brand_id = b.id
-      WHERE b.name = ? AND gc.active = 1 AND gc.stock_quantity > 0
+      WHERE b.name = ? AND gc.is_available = 1 AND gc.stock_quantity > 0
       ORDER BY gc.value ASC
     `, [brandName], callback);
   }
@@ -301,18 +301,18 @@ class Database {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
     
     this.db.run(`
-      INSERT INTO orders (id, brand_id, gift_card_id, customer_email, value, price, cashback, payment_address, expires_at)
+      INSERT INTO orders (order_id, wallet_address, brand_id, gift_card_id, card_value, usdt_amount, delivery_email, expires_at, status)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       orderId,
+      orderData.wallet_address,
       orderData.brand_id,
       orderData.gift_card_id,
-      orderData.customer_email,
-      orderData.value,
-      orderData.price,
-      orderData.cashback,
-      orderData.payment_address,
-      expiresAt
+      orderData.card_value,
+      orderData.usdt_amount,
+      orderData.delivery_email,
+      expiresAt,
+      'pending'
     ], function(err) {
       if (err) {
         callback(err, null);

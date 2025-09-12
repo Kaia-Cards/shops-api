@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
-module.exports = (db, providers) => {
+module.exports = (db, providers, fulfillmentService) => {
   const CASHBACK_RATE = 0.01;
 
   function generatePaymentAddress() {
@@ -34,7 +34,14 @@ module.exports = (db, providers) => {
       status: 'OK', 
       timestamp: new Date().toISOString(),
       version: '1.0.0',
-      service: 'KaiaCards API'
+      service: 'KaiaCards API',
+      services: {
+        database: db ? 'connected' : 'disconnected',
+        fulfillment: fulfillmentService ? 'connected' : 'disconnected',
+        providers: providers ? 'connected' : 'disconnected'
+      },
+      environment: process.env.NODE_ENV || 'development',
+      network: process.env.NODE_ENV === 'production' ? 'mainnet' : 'testnet'
     });
   });
 
@@ -55,7 +62,7 @@ module.exports = (db, providers) => {
         discount: brand.discount_rate,
         minValue: brand.min_value,
         maxValue: brand.max_value,
-        available: brand.active === 1,
+        available: brand.is_active === 1,
         cardCount: brand.card_count || 0
       }));
       
@@ -67,7 +74,7 @@ module.exports = (db, providers) => {
     const { brandName } = req.params;
     
     db.db.get(`
-      SELECT * FROM brands WHERE name = ? AND active = 1
+      SELECT * FROM brands WHERE name = ? AND is_active = 1
     `, [brandName], (err, brand) => {
       if (err) {
         return res.status(500).json({ error: 'Database error' });
@@ -148,7 +155,7 @@ module.exports = (db, providers) => {
           return res.status(500).json({ error: 'Database error' });
         }
         
-        const selectedBrand = brands.find(b => b.name === brand && b.active === 1);
+        const selectedBrand = brands.find(b => b.name === brand && b.is_active === 1);
         if (!selectedBrand) {
           return res.status(404).json({ error: 'Brand not found or inactive' });
         }
@@ -274,41 +281,28 @@ module.exports = (db, providers) => {
             
             setTimeout(async () => {
               try {
-                const brand = await db.db.get('SELECT api_provider FROM brands WHERE id = ?', [order.brand_id]);
-                const apiProvider = brand?.api_provider || 'mock_provider';
-                
-                const giftCardResult = await providers.purchaseGiftCard(
-                  apiProvider,
-                  {
-                    ...order,
-                    txHash,
-                    walletAddress
-                  },
-                  {}
-                );
-                
-                if (giftCardResult.success) {
-                  db.deliverOrder(orderId, giftCardResult.cardCode, (err) => {
-                    if (err) {
-                      console.error('Delivery error:', err);
-                      return;
-                    }
-                    
+                if (fulfillmentService) {
+                  const result = await fulfillmentService.fulfillOrder(orderId);
+                  console.log(`Order ${orderId} fulfillment result:`, result.success ? 'SUCCESS' : 'FAILED');
+                  
+                  if (result.success) {
                     db.updateCustomerStats(order.customer_email, order.price, order.cashback, (err) => {
                       if (err) {
                         console.error('Customer stats update error:', err);
                       }
                     });
-                  });
+                  }
                 } else {
-                  db.db.run(`
-                    UPDATE orders 
-                    SET status = 'failed' 
-                    WHERE id = ?
-                  `, [orderId]);
+                  console.log('Fulfillment service not available, using fallback');
+                  const mockCardCode = `DEMO-${Math.random().toString(36).substring(2, 15).toUpperCase()}`;
+                  db.deliverOrder(orderId, mockCardCode, (err) => {
+                    if (!err) {
+                      db.updateCustomerStats(order.customer_email, order.price, order.cashback, () => {});
+                    }
+                  });
                 }
               } catch (error) {
-                console.error('Gift card purchase error:', error);
+                console.error('Fulfillment error:', error);
                 db.db.run(`
                   UPDATE orders 
                   SET status = 'failed' 

@@ -6,6 +6,9 @@ require('dotenv').config();
 
 const Database = require('./database');
 const GiftCardProviders = require('./giftCardProviders');
+const FulfillmentService = require('./services/fulfillment');
+const PaymentMonitor = require('./services/payment-monitor');
+const BlockchainService = require('./config/blockchain');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const blockchainRoutes = require('./routes/blockchain');
@@ -13,10 +16,18 @@ const blockchainRoutes = require('./routes/blockchain');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
+const getAllowedOrigins = () => {
+  if (process.env.CORS_ORIGINS) {
+    return process.env.CORS_ORIGINS.split(',');
+  }
+  
+  return process.env.NODE_ENV === 'production' 
     ? ['https://kaiacards.com', 'https://www.kaiacards.com']
-    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+};
+
+const corsOptions = {
+  origin: getAllowedOrigins(),
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -46,10 +57,13 @@ if (process.env.NODE_ENV === 'production') {
 
 const db = new Database();
 const providers = new GiftCardProviders();
+const blockchainService = new BlockchainService();
+const fulfillmentService = new FulfillmentService(db);
+const paymentMonitor = new PaymentMonitor(db, blockchainService);
 
-app.use('/api', publicRoutes(db, providers));
+app.use('/api', publicRoutes(db, providers, fulfillmentService));
 app.use('/api/admin', adminRoutes(db, providers));
-app.use('/api/blockchain', blockchainRoutes(db));
+app.use('/api/blockchain', blockchainRoutes(db, blockchainService));
 
 app.post('/api/order', strictLimiter);
 app.post('/api/order/:orderId/pay', strictLimiter);
@@ -84,6 +98,20 @@ app.use((req, res) => {
     ]
   });
 });
+
+paymentMonitor.on('payment_confirmed', async (paymentData) => {
+  console.log(`Payment confirmed for order: ${paymentData.orderId}`);
+  try {
+    await fulfillmentService.fulfillOrder(paymentData.orderId);
+    console.log(`Order ${paymentData.orderId} fulfilled successfully`);
+  } catch (error) {
+    console.error(`Order fulfillment failed for ${paymentData.orderId}:`, error);
+  }
+});
+
+if (process.env.NODE_ENV !== 'test') {
+  paymentMonitor.startMonitoring();
+}
 
 cron.schedule('*/5 * * * *', () => {
   console.log(`[${new Date().toISOString()}] Running maintenance tasks...`);
