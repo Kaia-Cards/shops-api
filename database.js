@@ -117,8 +117,47 @@ class Database {
         )
       `);
 
+      this.addMissingColumns();
+      this.addPaymentMonitoringTable();
       this.seedData();
     });
+  }
+
+  addMissingColumns() {
+    // Add new columns to existing orders table if they don't exist
+    const newColumns = [
+      { name: 'purchase_id', type: 'TEXT' },
+      { name: 'confirmation_tx_hash', type: 'TEXT' },
+      { name: 'refund_tx_hash', type: 'TEXT' },
+      { name: 'confirmed_at', type: 'DATETIME' },
+      { name: 'refunded_at', type: 'DATETIME' }
+    ];
+
+    newColumns.forEach(column => {
+      this.db.run(`
+        ALTER TABLE orders ADD COLUMN ${column.name} ${column.type}
+      `, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error(`Error adding column ${column.name}:`, err);
+        }
+      });
+    });
+  }
+
+  addPaymentMonitoringTable() {
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS payment_monitoring (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT NOT NULL,
+        expected_amount REAL,
+        received_amount REAL,
+        status TEXT DEFAULT 'waiting',
+        tx_hash TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        confirmed_at DATETIME,
+        FOREIGN KEY (order_id) REFERENCES orders (id)
+      )
+    `);
   }
 
   seedData() {
