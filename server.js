@@ -12,6 +12,7 @@ const BlockchainService = require('./config/blockchain');
 const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const blockchainRoutes = require('./routes/blockchain');
+const lineRoutes = require('./routes/line');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -64,6 +65,7 @@ const paymentMonitor = new PaymentMonitor(db, blockchainService);
 app.use('/api', publicRoutes(db, providers, fulfillmentService));
 app.use('/api/admin', adminRoutes(db, providers));
 app.use('/api/blockchain', blockchainRoutes(db, blockchainService));
+app.use('/api/line', lineRoutes);
 
 app.post('/api/order', strictLimiter);
 app.post('/api/order/:orderId/pay', strictLimiter);
