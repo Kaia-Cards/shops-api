@@ -38,7 +38,7 @@ function seedInitialData() {
     { name: 'BeautyMNL', category: 'Beauty', country: 'Philippines', discount: 15, min: 10, max: 300, logo: 'https://cdn.beautymnl.com/images/logo-beautymnl.svg' },
     { name: 'Althea', category: 'Beauty', country: 'Korea', discount: 18, min: 15, max: 300, logo: 'https://ph.althea.kr/wp-content/uploads/sites/10/2019/02/althea_logo.png' },
     { name: 'Qoo10', category: 'E-commerce', country: 'Singapore', discount: 10, min: 10, max: 500, logo: 'https://www.qoo10.sg/gmkt.inc/Special/Qoo10_7th/img/logo.png' },
-    { name: 'LINE Store', category: 'Digital', country: 'Thailand', discount: 5, min: 5, max: 100, logo: 'https://vos.line-scdn.net/line-shopping-tw/rich-menu/logo.png' },
+    { name: 'LINE Store', category: 'E-commerce', country: 'Thailand', discount: 5, min: 5, max: 100, logo: 'https://vos.line-scdn.net/line-shopping-tw/rich-menu/logo.png' },
     { name: 'TrueMoney', category: 'Payment', country: 'Thailand', discount: 3, min: 10, max: 1000, logo: 'https://www.truemoney.com/wp-content/uploads/2021/01/truemoney-logo.png' },
     { name: 'GCash', category: 'Payment', country: 'Philippines', discount: 4, min: 10, max: 1000, logo: 'https://www.gcash.com/wp-content/uploads/2019/12/gcash-logo.png' },
     { name: 'ShopeePay', category: 'Payment', country: 'Singapore', discount: 6, min: 10, max: 500, logo: 'https://cf.shopee.sg/file/b184d9cc60d612dc8234116df37acf50' },
