@@ -43,11 +43,25 @@ class Database {
       `);
 
       this.db.run(`
+        CREATE TABLE IF NOT EXISTS line_users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          line_user_id TEXT UNIQUE NOT NULL,
+          display_name TEXT,
+          picture_url TEXT,
+          status_message TEXT,
+          language TEXT DEFAULT 'en',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          last_interaction DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      this.db.run(`
         CREATE TABLE IF NOT EXISTS orders (
           id TEXT PRIMARY KEY,
           brand_id TEXT,
           gift_card_id TEXT,
           customer_email TEXT,
+          line_user_id TEXT,
           value REAL,
           price REAL,
           cashback REAL,
@@ -450,10 +464,146 @@ class Database {
 
   updateTangoOrderStatus(tangoReferenceId, status, callback) {
     this.db.run(`
-      UPDATE tango_orders 
+      UPDATE tango_orders
       SET status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE tango_reference_id = ?
     `, [status, tangoReferenceId], callback);
+  }
+
+  createLineUser(userData, callback) {
+    this.db.run(`
+      INSERT OR IGNORE INTO line_users (line_user_id, display_name, picture_url, status_message)
+      VALUES (?, ?, ?, ?)
+    `, [
+      userData.line_user_id,
+      userData.display_name,
+      userData.picture_url,
+      userData.status_message
+    ], callback);
+  }
+
+  getLineUser(lineUserId, callback) {
+    this.db.get(`
+      SELECT * FROM line_users WHERE line_user_id = ?
+    `, [lineUserId], callback);
+  }
+
+  updateLineUser(lineUserId, updates, callback) {
+    const fields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+    const values = Object.values(updates);
+    values.push(lineUserId);
+
+    this.db.run(`
+      UPDATE line_users
+      SET ${fields}, last_interaction = CURRENT_TIMESTAMP
+      WHERE line_user_id = ?
+    `, values, callback);
+  }
+
+  getUserOrdersByLineId(lineUserId, callback) {
+    this.db.all(`
+      SELECT o.*, b.name as brand, b.logo as brand_logo
+      FROM orders o
+      JOIN brands b ON o.brand_id = b.id
+      WHERE o.line_user_id = ?
+      ORDER BY o.created_at DESC
+    `, [lineUserId], callback);
+  }
+
+  getOrder(orderId, callback) {
+    this.db.get(`
+      SELECT o.*, b.name as brand, b.logo as brand_logo, gc.value
+      FROM orders o
+      JOIN brands b ON o.brand_id = b.id
+      JOIN gift_cards gc ON o.gift_card_id = gc.id
+      WHERE o.order_id = ?
+    `, [orderId], callback);
+  }
+
+  getBrand(brandId, callback) {
+    this.db.get(`
+      SELECT * FROM brands WHERE id = ?
+    `, [brandId], callback);
+  }
+
+  getGiftCards(brandId, callback) {
+    this.db.all(`
+      SELECT * FROM gift_cards
+      WHERE brand_id = ? AND is_available = 1 AND stock_quantity > 0
+      ORDER BY value ASC
+    `, [brandId], callback);
+  }
+
+  getHotDeals(callback) {
+    this.db.all(`
+      SELECT b.name as brand, b.discount_rate as discount
+      FROM brands b
+      WHERE b.is_active = 1 AND b.discount_rate >= 8
+      ORDER BY b.discount_rate DESC
+      LIMIT 5
+    `, callback);
+  }
+
+  createOrder(orderData, callback) {
+    const orderId = uuidv4();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    const items = orderData.items || [];
+    const total = orderData.total || 0;
+
+    if (items.length === 1) {
+      const item = items[0];
+      this.db.run(`
+        INSERT INTO orders (order_id, line_user_id, brand_id, gift_card_id, value, price, status, expires_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
+      `, [
+        orderId,
+        orderData.lineUserId,
+        item.brandId,
+        item.cardId,
+        item.value,
+        item.price,
+        expiresAt
+      ], (err) => {
+        if (err) return callback(err);
+
+        this.db.get(`
+          SELECT o.*, b.name as brand, b.logo as brand_logo, b.discount_rate
+          FROM orders o
+          JOIN brands b ON o.brand_id = b.id
+          WHERE o.order_id = ?
+        `, [orderId], (err, order) => {
+          if (err) return callback(err);
+
+          const result = {
+            orderId: order.order_id,
+            brand: order.brand,
+            brandLogo: order.brand_logo,
+            value: order.value,
+            pricing: {
+              originalValue: order.value,
+              discountedPrice: order.price,
+              savings: order.value - order.price,
+              cashback: order.price * 0.01,
+              finalPrice: order.price
+            },
+            payment: {
+              method: 'USDT',
+              amount: order.price,
+              address: 'generated_address_' + orderId.slice(-8),
+              network: 'kaia'
+            },
+            status: order.status,
+            expiresAt: order.expires_at,
+            expiresIn: 15
+          };
+
+          callback(null, result);
+        });
+      });
+    } else {
+      callback(new Error('Multiple items not yet supported'));
+    }
   }
 
   close() {

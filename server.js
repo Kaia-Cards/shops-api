@@ -13,6 +13,9 @@ const publicRoutes = require('./routes/public');
 const adminRoutes = require('./routes/admin');
 const blockchainRoutes = require('./routes/blockchain');
 const lineRoutes = require('./routes/line');
+const lineBotRoutes = require('./routes/line-bot');
+const linePayRoutes = require('./routes/line-pay');
+const paymentWebhookRoutes = require('./routes/payment-webhook');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -66,6 +69,9 @@ app.use('/api', publicRoutes(db, providers, fulfillmentService));
 app.use('/api/admin', adminRoutes(db, providers));
 app.use('/api/blockchain', blockchainRoutes(db, blockchainService));
 app.use('/api/line', lineRoutes);
+app.use('/api/linebot', lineBotRoutes(db, fulfillmentService, providers));
+app.use('/api/linepay', linePayRoutes(db));
+app.use('/api/webhooks', paymentWebhookRoutes(db, fulfillmentService, providers));
 
 app.post('/api/order', strictLimiter);
 app.post('/api/order/:orderId/pay', strictLimiter);
