@@ -1,8 +1,8 @@
-# KaiaCards Shops API - Backend Infrastructure
+# KaiaCards Shops API 
 
-## System Architecture
+## TL, dr 
 
-The KaiaCards Shops API is a comprehensive Node.js backend that orchestrates the digital gift card marketplace ecosystem. It provides robust REST API endpoints, blockchain integration, real-time payment monitoring, and automated fulfillment workflows for seamless gift card transactions across multiple Asian and global brands.
+The KaiaCards Shops API is a Node.js backend for the digital gift card marketplace. What it has: REST API endpoints, kaia integration, payment and workflows for gift card transactions with Asian brands.
 
 ## Repository Structure
 
@@ -207,13 +207,6 @@ class PaymentMonitor {
 }
 ```
 
-**Monitoring Features**
-- Real-time Kaia blockchain scanning
-- Multi-confirmation verification
-- Automatic retry mechanisms
-- Payment timeout handling
-- Gas fee calculation and validation
-
 ### Fulfillment Service
 
 **Automated Card Delivery**
@@ -239,7 +232,6 @@ class FulfillmentService {
 - Tango Card API for global brands
 - Direct brand API integrations
 - Testnet card generation for development
-- Multi-provider fallback systems
 
 ### LINE Integration Service
 
@@ -261,13 +253,6 @@ class LineIntegrationService {
   }
 }
 ```
-
-**LINE Features**
-- Rich messaging with flex templates
-- Push notifications for order updates
-- Rich menu configuration
-- User behavior analytics
-- LINE Pay payment processing
 
 ## Gift Card Provider Management
 
@@ -292,28 +277,6 @@ const providers = {
   }
 };
 ```
-
-**Provider Integration Process**
-1. **API Authentication**: Secure credential management
-2. **Inventory Sync**: Real-time stock level monitoring
-3. **Order Routing**: Smart provider selection
-4. **Fulfillment**: Automated card delivery
-5. **Error Handling**: Provider fallback mechanisms
-
-### Brand Portfolio Management
-
-**Supported Brands and Categories**
-
-**E-commerce Leaders**
-- Rakuten: Japan's e-commerce giant with loyalty integration
-- Shopee: Southeast Asia's marketplace leader
-- Coupang: South Korea's rapid delivery platform
-
-**Travel and Experiences**
-- Klook: Asia-Pacific activity and travel bookings
-- Agoda: Accommodation booking specialist
-- Trip.com: Comprehensive travel services
-- AirAsia: Low-cost airline network
 
 **Brand Configuration**
 ```javascript
@@ -349,13 +312,6 @@ contract KaiaGiftCardMarketPlace {
 }
 ```
 
-**Transaction Processing Flow**
-1. **Order Creation**: Database record generation
-2. **Payment Address**: Unique address per transaction
-3. **Monitoring**: Real-time blockchain scanning
-4. **Confirmation**: Multi-block verification
-5. **Fulfillment**: Automated card delivery
-6. **Completion**: Order status finalization
 
 ### Payment Processing
 
@@ -376,12 +332,6 @@ class BlockchainService {
 }
 ```
 
-**Security Measures**
-- Multi-signature wallet integration
-- Transaction amount validation
-- Gas fee optimization
-- Re-entrancy protection
-- Address verification
 
 ## Development and Deployment
 
@@ -467,8 +417,6 @@ const migrations = [
 ];
 ```
 
-## Performance and Monitoring
-
 ### Caching Strategy
 
 **Memory Caching**
@@ -508,9 +456,9 @@ class ErrorHandler {
 **API Protection**
 - General rate limit: 100 requests per 15 minutes
 - Strict rate limit: 5 requests per minute for sensitive endpoints
-- IP-based throttling
+- IP throttling
 - JWT token validation
-- CORS configuration for allowed origins
+- CORS configuration for origins
 
 **Security Headers**
 - Helmet.js for security headers
@@ -518,5 +466,3 @@ class ErrorHandler {
 - SQL injection prevention
 - XSS protection
 - CSRF token validation
-
-This backend infrastructure provides a robust, scalable foundation for the KaiaCards marketplace, handling complex multi-provider integrations, blockchain transactions, and LINE ecosystem features with enterprise-grade reliability and security.
